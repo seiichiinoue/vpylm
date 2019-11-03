@@ -343,4 +343,33 @@ public:
             phrases.push_back(phrase);
         }
     }
+    template <class Archive>
+    void serialize(Archive& archive, unsigned int version)
+    {
+        archive & _root;
+        archive & _g0;
+        archive & _beta_stop;
+        archive & _beta_pass;
+        archive & _d_m;
+        archive & _theta_m;
+        archive & _a_m;
+        archive & _b_m;
+        archive & _alpha_m;
+        archive & _beta_m;
+    }
+    bool save(string filename = "hpylm.model"){
+        std::ofstream ofs(filename);
+        boost::archive::binary_oarchive oarchive(ofs);
+        oarchive << *this;
+        return true;
+    }
+    bool load(string filename = "hpylm.model"){
+        std::ifstream ifs(filename);
+        if(ifs.good() == false){
+            return false;
+        }
+        boost::archive::binary_iarchive iarchive(ifs);
+        iarchive >> *this;
+        return true;
+    }
 };
