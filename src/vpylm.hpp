@@ -191,4 +191,18 @@ public:
         }
         return p_stop;
     }
+    double compute_Pw(vector<id> &token_ids) {
+        if (token_ids.size() == 0) {
+            return 0;
+        }
+        double mult_pw = 1;
+        vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + 1);
+        for (int t=1; t<token_ids.size(); ++t) {
+            id token_id = token_ids[t];
+            double pw_h = compute_Pw_given_h(token_id, context_token_ids);
+            mult_pw *= pw_h;
+            context_token_ids.push_back(token_ids[t]);
+        }
+        return mult_pw;
+    }
 };
