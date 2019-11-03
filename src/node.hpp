@@ -40,6 +40,9 @@ public:
     void add_customer_to_new_table(id token_id, double g0, vector<double> &d_m, vector<double> &theta_m) {
 
     }
+    void remove_customer_from_table(id token_id, int table_k) {
+
+    }
     bool add_customer(id token_id, double g0, vector<double> &d_m, vector<double> &theta_m, bool update_beta_count=true) {
         double d_u = d_m[_depth];
         double theta_u = theta_m[_depth];
@@ -85,6 +88,32 @@ public:
         add_customer_to_new_table(token_id, g0, d_m, theta_m);
         if (update_beta_count) {
             // increment stop count
+        }
+        return true;
+    }
+    bool remove_customer(id token_id, bool update_beta_count=true) {
+        auto itr = _arrangement.find(token_id);
+        // num of customer per table
+        vector<int> &num_customers_at_table = itr->second;
+        // for normalizer 
+        double sum = std::accumulate(num_customers_at_table.begin(), num_customers_at_table.end(), 0);
+        double normalizer = 1.0 / sum;
+        double bernoulli = sampler::uniform(0, 1);
+        double stack = 0;
+        // c_{u w k}; num of customer at table k of restaurant u serving word w
+        for (int k=0; k<num_customers_at_table.size(); ++k) {
+            stack += num_customers_at_table[k] * normalizer;
+            if (bernoulli <= stack) {
+                remove_customer_from_table(token_id, k);
+                if (update_beta_count) {
+                    // decrement stop count;
+                }
+                return true;
+            }
+        }
+        remove_customer_from_table(token_id, num_customers_at_table.size() - 1);
+        if (update_beta_count) {
+            // decrement stop count
         }
         return true;
     }
