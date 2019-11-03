@@ -205,4 +205,64 @@ public:
         }
         return mult_pw;
     }
+    double compute_log_Pw(vector<id> &token_ids) {
+        if (token_ids.size() == 0) {
+            return 0;
+        }
+        double sum_pw_h = 0;
+        vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + 1);
+        for (int t=1; t<token_ids.size(); ++t) {
+            id token_id = token_ids[t];
+            double pw_h = compute_Pw_given_h(token_id, context_token_ids);
+            sum_pw_h += log(pw_h);
+            context_token_ids.push_back(token_ids[t]);
+        }
+        return sum_pw_h;
+    }
+    double compute_log2_Pw(vector<id> &token_ids) {
+        if (token_ids.size() == 0) {
+            return 0;
+        }
+        double sum_pw_h = 0;
+        vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + 1);
+        for (int t=1; t<token_ids.size(); ++t) {
+            id token_id = token_ids[t];
+            double pw_h = compute_Pw_given_h(token_id, context_token_ids);
+            sum_pw_h += log2(pw_h);
+            context_token_ids.push_back(token_ids[t]);
+        }
+        return sum_pw_h;
+    }
+    void init_hyperparams_at_depth_if_needed(int depth) {
+        if (depth >= _d_m.size()) {
+            while (_d_m.size() <= depth) {
+                _d_m.push_back(HPYLM_INITIAL_D);
+            }
+        }
+        if (depth >= _theta_m.size()) {
+            while (_theta_m.size() <= depth) {
+                _theta_m.push_back(HPYLM_INITIAL_THETA);
+            }
+        }
+        if (depth >= _a_m.size()) {
+            while (_a_m.size() <= depth) {
+                _a_m.push_back(HPYLM_INITIAL_A);
+            }
+        }
+        if (depth >= _b_m.size()) {
+            while (_b_m.size() <= depth) {
+                _b_m.push_back(HPYLM_INITIAL_B);
+            }
+        }
+        if (depth >= _alpha_m.size()) {
+            while (_alpha_m.size() <= depth) {
+                _alpha_m.push_back(HPYLM_INITIAL_ALPHA);
+            }
+        }
+        if (depth >= _beta_m.size()) {
+            while (_beta_m.size() <= depth) {
+                _beta_m.push_back(HPYLM_INITIAL_BETA);
+            }
+        }
+    }
 };
