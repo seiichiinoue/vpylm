@@ -169,6 +169,27 @@ public:
         double second_coeff = (theta_u + d_u * t_u) / (theta_u + c_u);
         return first_term + second_coeff * parent_pw;
     }
+    // vpylm
+    double stop_probability(double beta_stop, double beta_pass, bool recursive=true) {
+        double p = (_stop_count + beta_stop) / (_stop_count + _pass_count + beta_stop + bata_pass);
+        if (!recursive) {
+            return p;
+        }
+        if (_parent != NULL) {
+            p *= _parent->pass_probability(beta_stop, beta_pass);
+        }
+        return p;
+    }
+    double pass_probability(double beta_stop, double beta_pass, bool recursive=true) {
+        double p = (_pass_count + beta_pass) / (_stop_count + _pass_count + beta_stop + beta_pass);
+        if (!recursive) {
+            return p;
+        }
+        if (_parent != NULL) {
+            p *= _parent->pass_probability(beta_stop, beta_pass);
+        }
+        return p;
+    }
     void init_hyperparams_at_depth_if_needed(int depth, vector<double> &d_m, vector<double> &theta_m) {
 
     }
