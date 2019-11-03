@@ -265,4 +265,82 @@ public:
             }
         }
     }
+    void sum_auxiliary_variables_recursively(Node *node, vector<double> &sum_log_x_u_m, vector<double> &sum_y_ui_m, vector<double> &sum_1_y_ui_m, vector<double> &sum_1_z_uwkj_m) {
+        for (auto elem : node->_children) {
+            Node *child = elem.second;
+            int depth = child->_depth;
+            double d = _d_m[depth];
+            double theta = _theta_m[depth];
+            sum_log_x_u_m[depth] += child->auxiliary_log_x_u(theta);    // log(x_u)
+            sum_y_ui_m[depth] += child->auxiliary_y_ui(d, theta);       // y_ui
+            sum_1_y_ui_m[depth] += child->auxiliary_1_y_ui(d, theta);   // 1 - y_ui
+            sum_1_z_uwkj_m[depth] += child->auxiliary_1_z_uwkj(d);      // 1 - z_uwkj
+            sum_auxiliary_variables_recursively(child, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m);
+        }
+    }
+    // estimating `d` and `theta`
+    void sample_hyperparams() {
+        int max_depth = get_depth();
+        vector<double> sum_log_x_u_m(max_depth + 1, 0.0);
+        vector<double> sum_y_ui_m(max_depth + 1, 0.0);
+        vector<double> sum_1_y_ui_m(max_depth + 1, 0.0);
+        vector<double> sum_1_z_uwkj_m(max_depth + 1, 0.0);
+        // root
+        sum_log_x_u_m[0] = _root->auxiliary_log_x_u(_theta_m[0]);
+        sum_y_ui_m[0] = _root->auxiliary_y_ui(_d_m[0], _theta_m[0]);
+        sum_1_y_ui_m[0] = _root->auxiliary_1_y_ui(_d_m[0], _theta_m[0]);
+        sum_1_z_uwkj_m[0] = _root->auxiliary_1_z_uwkj(_d_m[0]);
+        // others
+        init_hyperparams_at_depth_if_needed(max_depth);
+        sum_auxiliary_variables_recursively(_root, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m);
+        for (int u=0; u<=max_depth; ++u) {
+            _d_m[u] = sampler::beta(_a_m[u] + sum_1_y_ui_m[u], _b_m[u] + sum_1_z_uwkj_m[u]);
+            _theta_m[u] = sampler::gamma(_alpha_m[u] + sum_y_ui_m[u], _beta_m[u] - sum_log_x_u_m[u]);
+
+        }
+    }
+    int get_num_nodes() {
+        return _root->get_num_nodes();
+    }
+    int get_num_customers() {
+        return _root->get_num_customers();
+    }
+    int get_num_tables() {
+        return _root->get_num_tables();
+    }
+    int get_sum_stop_counts() {
+        return _root->sum_stop_counts();
+    }
+    int get_sum_pass_counts() {
+        return _root->sum_pass_counts();
+    }
+    void update_max_depth(Node *node, int &max_depth) {
+        if (node->_depth > max_depth) {
+            max_depth = node->_depth;
+        }
+        for (const auto &elem : node->_children) {
+            Node *child = elem.second;
+            update_max_depth(child, max_depth);
+        }
+    }
+    int get_depth() {
+        int max_depth = 0;
+        update_max_depth(_root, max_depth);
+        return max_depth;
+    }
+    void count_tokens_of_each_depth(unordered_map<int, int> &map) {
+        _root->count_tokens_of_each_depth(map);
+    }
+    void enumerate_phrases_at_depth(int depth, vector<vector<id>> &phrases) {
+        vector<Node*> nodes;
+        _root->enumerate_nodes_at_depth(depth, nodes);
+        for (auto &node : nodes) {
+            vector<id> phrase;
+            while (node->_parent) {
+                phrase.push_back(node->_token_id);
+                node = node->_parent;
+            }
+            phrases.push_back(phrase);
+        }
+    }
 };
