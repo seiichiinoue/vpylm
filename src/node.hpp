@@ -44,6 +44,7 @@ public:
 
     }
     bool add_customer(id token_id, double g0, vector<double> &d_m, vector<double> &theta_m, bool update_beta_count=true) {
+        init_hyperparams_at_depth_if_needed(_depth, d_m, theta_m);
         double d_u = d_m[_depth];
         double theta_u = theta_m[_depth];
         double parent_Pw = g0;
@@ -118,6 +119,36 @@ public:
         return true;
     }
     double compute_Pw(id token_id, double g0, vector<double> &d_m, vector<double> &theta_m) {
+        init_hyperparams_at_depth_if_needed(_depth, d_m, theta_m);
+        double d_u = d_m[_depth];
+        double theta_u = theta_m[_depth];
+        double t_u = _num_tables;
+        double c_u = _num_customers;
+        auto itr = _arrangement.find(token_id);
+        // if target token does not exist
+        if (itr == _arrangement.end()) {
+            double coeff = (theta_u + d_u * t_u) / (theta_u + c_u);
+            if (_parent != NULL) {
+                return _parent->compute_Pw(token_id, g0, d_m, theta_m) * coeff;
+            }
+            // if _parent == NULL then;
+            return g0 * coeff;
+        }
+        double parent_Pw = g0;
+        if (_parent != NULL) {
+            // calculate recursively if parent does exist!
+            parent_Pw = _parent->compute_Pw(token_id, g0, d_m, theta_m);
+        }
+        vector<int> &num_customers_at_table = itr->second;
+        // c_uw: aggregate num of customer at all table of restaurant u serving word w
+        double c_uw = std::accumulate(num_customers_at_table.begin(), num_customers_at_table.end(), 0);
+        // t_uw: aggregate num of table at restaurant u serving word w
+        double t_uw = num_customers_at_table.size();
+        double first_term = std::max(0.0, c_uw - d_u * t_uw) / (theta_u + c_u);
+        double second_coeff = (theta_u + d_u * t_u) / (theta_u + c_u);
+        return first_term + second_coeff * parent_Pw;
+    }
+    void init_hyperparams_at_depth_if_needed(int depth, vector<double> &d_m, vector<double> &theta_m) {
 
     }
 };
