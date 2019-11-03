@@ -61,7 +61,7 @@ public:
         }
         return true;
     }
-    void remove_customer_from_table(id token_id, int table_k) {
+    bool remove_customer_from_table(id token_id, int table_k) {
         auto itr = _arrangement.find(token_id);
         vector<int> &num_customers_at_table = itr->second;
         num_customers_at_table[table_k]--;
@@ -91,7 +91,7 @@ public:
         if (itr == _arrangement.end()) {
             add_customer_to_new_table(token_id, g0, d_m, theta_m);
             if (update_beta_count) {
-                // increment stop count
+                increment_stop_count();
             }
             return true;
         }
@@ -114,7 +114,7 @@ public:
             if (bernoulli <= stack) {
                 add_customer_to_table(token_id, k, g0, d_m, theta_m);
                 if (update_beta_count) {
-                    // increment stop count
+                    increment_stop_count();
                 }
                 return true;
             }
@@ -140,14 +140,14 @@ public:
             if (bernoulli <= stack) {
                 remove_customer_from_table(token_id, k);
                 if (update_beta_count) {
-                    // decrement stop count;
+                    decrement_stop_count();
                 }
                 return true;
             }
         }
         remove_customer_from_table(token_id, num_customers_at_table.size() - 1);
         if (update_beta_count) {
-            // decrement stop count
+            decrement_stop_count();
         }
         return true;
     }
