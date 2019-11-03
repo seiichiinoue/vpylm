@@ -226,30 +226,123 @@ public:
         return p;
     }
     void increment_stop_count() {
-        ++_stop_count;
+        _stop_count++;
         if (_parent != NULL) {
             _parent->increment_pass_count();
         }
     }
     void decrement_stop_count() {
-        --_stop_count;
+        _stop_count--;
         if (_parent != NULL) {
             _parent->decrement_pass_count();
         }
     }
     void increment_pass_count() {
-        ++_pass_count;
+        _pass_count++;
         if (_parent != NULL) {
             _parent->increment_pass_count();
         }
     }
     void decrement_pass_count() {
-        --_pass_count;
+        _pass_count--;
         if (_parent != NULL) {
             _parent->decrement_pass_count();
         }
     }
+    // for estimating `d` and `theta`; supplementary variable
+    // x_u, y_ui, z_uwkj
+    double auxiliary_log_x_u(double theta_u) {
+        if(_num_customers >= 2) {
+            double x_u = sampler::beta(theta_u + 1, _num_customers - 1);
+            return log(x_u + 1e-8);
+        }
+        return 0;
+    }
+    double auxiliary_y_ui(double d_u, double theta_u) {
+        if(_num_tables >= 2) {
+            double sum_y_ui = 0;
+            for(int i = 1;i <= _num_tables - 1;i++) {
+                double denominator = theta_u + d_u * i;
+                assert(denominator > 0);
+                sum_y_ui += sampler::bernoulli(theta_u / denominator);
+            }
+            return sum_y_ui;
+        }
+        return 0;
+    }
+    double auxiliary_1_y_ui(double d_u, double theta_u) {
+        if(_num_tables >= 2) {
+            double sum_1_y_ui = 0;
+            for(int i = 1;i <= _num_tables - 1;i++) {
+                double denominator = theta_u + d_u * i;
+                assert(denominator > 0);
+                sum_1_y_ui += 1.0 - sampler::bernoulli(theta_u / denominator);
+            }
+            return sum_1_y_ui;
+        }
+        return 0;
+    }
+    double auxiliary_1_z_uwkj(double d_u) {
+        double sum_z_uwkj = 0;
+        // c_u..
+        for(auto elem: _arrangement) {
+            // c_uw.
+            vector<int> &num_customers_at_table = elem.second;
+            for(int k = 0;k < num_customers_at_table.size();k++) {
+                // c_uwk
+                int c_uwk = num_customers_at_table[k];
+                if(c_uwk >= 2){
+                    for(int j = 1;j <= c_uwk - 1;j++) {
+                        assert(j - d_u > 0);
+                        sum_z_uwkj += 1 - sampler::bernoulli((j - 1) / (j - d_u));
+                    }
+                }
+            }
+        }
+        return sum_z_uwkj;
+    }
     void init_hyperparams_at_depth_if_needed(int depth, vector<double> &d_m, vector<double> &theta_m) {
-
+        if (depth >= d_m.size()) {
+            while (d_m.size() <= depth) {
+                d_m.push_back(HPYLM_INITIAL_D);
+            }
+            while (theta_m.size() <= depth) {
+                theta_m.push_back(HPYLM_INITIAL_THETA);
+            }
+        }
+    }
+    template <class Archive>
+    void serialize(Archive& archive, unsigned int version)
+    {
+        archive & _children;
+        archive & _arrangement;
+        archive & _num_tables;
+        archive & _num_customers;
+        archive & _parent;
+        archive & _stop_count;
+        archive & _pass_count;
+        archive & _token_id;
+        archive & _depth;
+    }
+    friend ostream& operator<<(ostream& os, const Node& node){
+        os << "[id." << node._token_id << ":depth." << node._depth << "]" << endl;
+        os << "_num_tables: " << node._num_tables << ", _num_customers: " << node._num_customers << endl;
+        os << "_stop_count: " << node._stop_count << ", _pass_count: " << node._pass_count << endl;
+        os << "- _arrangement" << endl;
+        for(auto elem: node._arrangement){
+            os << "  [" << elem.first << "]" << endl;
+            os << "    ";
+            for(auto customers: elem.second){
+                os << customers << ",";
+            }
+            os << endl;
+        }
+        os << endl;
+        os << "- _children" << endl;
+        os << "    ";
+        for(auto elem: node._children){
+        }
+        os << endl;
+        return os;
     }
 };
