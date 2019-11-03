@@ -34,14 +34,49 @@ public:
         _token_id = token_id;
         _parent = NULL;
     }
-    void add_customer_to_table(id token_id, int table_k, double g0, vector<double> &d_m, vector<double> &theta_m) {
-
+    bool add_customer_to_table(id token_id, int table_k, double g0, vector<double> &d_m, vector<double> &theta_m) {
+        auto itr = _arrangement.find(token_id);
+        if (itr == _arrangement.end()) {
+            return add_customer_to_new_table(token_id, g0, d_m, theta_m);
+        } // else
+        vector<int> &num_customers_at_table = itr->second;
+        num_customers_at_table[table_k]++;
+        _num_customers++;
+        return true;
     }
-    void add_customer_to_new_table(id token_id, double g0, vector<double> &d_m, vector<double> &theta_m) {
-
+    bool add_customer_to_new_table(id token_id, double g0, vector<double> &d_m, vector<double> &theta_m) {
+        auto itr = _arrangement.find(token_id);
+        if (itr == _arrangement.end()) {
+            vector<int> tables = {1};
+            _arrangement[token_id] = tables;
+        } else {
+            vector<int> &num_customers_at_table = itr->second;
+            num_customers_at_table.push_back(1);
+        }
+        _num_tables++;
+        _num_customers++;
+        if (_parent != NULL) {
+            // send dummy customer to parent node(restraunt)
+            _parent->add_customer(token_id, g0, d_m, theta_m, false);
+        }
+        return true;
     }
     void remove_customer_from_table(id token_id, int table_k) {
-
+        auto itr = _arrangement.find(token_id);
+        vector<int> &num_customers_at_table = itr->second;
+        num_customers_at_table[table_k]--;
+        _num_customers--;
+        if (num_customers_at_table[table_k] == 0) {
+            if (_parent != NULL) {
+                _parent->remove_customer(token_id, false);
+            }
+            num_customers_at_table.erase(num_customers_at_table.begin() + table_k);
+            _num_tables--;
+            if (num_customers_at_table.size() == 0) {
+                _arrangement.erase(token_id);
+            }
+        }
+        return true;
     }
     bool add_customer(id token_id, double g0, vector<double> &d_m, vector<double> &theta_m, bool update_beta_count=true) {
         init_hyperparams_at_depth_if_needed(_depth, d_m, theta_m);
@@ -171,7 +206,7 @@ public:
     }
     // vpylm
     double stop_probability(double beta_stop, double beta_pass, bool recursive=true) {
-        double p = (_stop_count + beta_stop) / (_stop_count + _pass_count + beta_stop + bata_pass);
+        double p = (_stop_count + beta_stop) / (_stop_count + _pass_count + beta_stop + beta_pass);
         if (!recursive) {
             return p;
         }
