@@ -190,6 +190,30 @@ public:
         }
         return p;
     }
+    void increment_stop_count() {
+        ++_stop_count;
+        if (_parent != NULL) {
+            _parent->increment_pass_count();
+        }
+    }
+    void decrement_stop_count() {
+        --_stop_count;
+        if (_parent != NULL) {
+            _parent->decrement_pass_count();
+        }
+    }
+    void increment_pass_count() {
+        ++_pass_count;
+        if (_parent != NULL) {
+            _parent->increment_pass_count();
+        }
+    }
+    void decrement_pass_count() {
+        --_pass_count;
+        if (_parent != NULL) {
+            _parent->decrement_pass_count();
+        }
+    }
     void init_hyperparams_at_depth_if_needed(int depth, vector<double> &d_m, vector<double> &theta_m) {
 
     }
