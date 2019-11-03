@@ -12,7 +12,6 @@
 #include <fstream>
 #include "common.hpp"
 #include "sampler.hpp"
-
 using namespace std;
 
 class Node {
@@ -26,6 +25,7 @@ public:
     int _pass_count;
     int _depth;
     id _token_id;
+
     Node(id token_id=0) {
         _num_tables = 0;
         _num_customers = 0;
@@ -33,6 +33,52 @@ public:
         _pass_count = 0;
         _token_id = token_id;
         _parent = NULL;
+    }
+    bool parent_exists() {
+        return !(_parent == NULL);
+    }
+    bool child_exists(id token_id) {
+        return !(_children.find(token_id) == _children.end());
+    }
+    bool need_to_remove_from_parent() {
+        if (_parent == NULL) {
+            return false;
+        }
+        if (_children.size() == 0 && _arrangement.size() == 0) {
+            return true;
+        }
+        return false;
+    }
+    int get_num_tables_serving_word(id token_id) {
+        if (_arrangement.find(token_id) == _arrangement.end()) {
+            return 0;
+        }
+        return _arrangement[token_id].size();
+    }
+    int get_num_customers_eating_word(id token_id) {
+        if (_arrangement.find(token_id) == _arrangement.end()) {
+            return 0;
+        }
+        vector<int> &num_customers_at_table = _arrangement[token_id];
+        int sum = 0;
+        for (int i=0; i<num_customers_at_table.size(); ++i) {
+            sum += num_customers_at_table[i];
+        }
+        return sum;
+    }
+    Node *find_child_node(id token_id, bool generate_if_not_exist=false) {
+        auto itr = _children.find(token_id);
+        if (itr != _children.end()) {
+            return itr->second;
+        }
+        if (generate_if_not_exist == false) {
+            return NULL;
+        }
+        Node *child = new Node(token_id);
+        child->_parent = this;
+        child->_depth = _depth + 1;
+        _children[token_id] = child;
+        return child;
     }
     bool add_customer_to_table(id token_id, int table_k, double g0, vector<double> &d_m, vector<double> &theta_m) {
         auto itr = _arrangement.find(token_id);
@@ -249,6 +295,90 @@ public:
             _parent->decrement_pass_count();
         }
     }
+    bool remove_from_parent() {
+        if (_parent == NULL) {
+            return false;
+        }
+        _parent->delete_child_node(_token_id);
+        return true;
+    }
+    void delete_child_node(id token_id) {
+        Node *child = find_child_node(token_id);
+        if (child) {
+            _children.erase(token_id);
+            delete child;
+        }
+        if (_children.size() == 0 && _arrangement.size() == 0) {
+            remove_from_parent();
+        }
+    }
+    int get_max_depth(int base) {
+        int max_depth = base;
+        for (auto &elem : _children) {
+            int depth = elem.second->get_max_depth(base + 1);
+            if (depth > max_depth) {
+                max_depth = depth;
+            }
+        }
+        return max_depth;
+    }
+    int get_num_nodes() {
+        int num = _children.size();
+        for (auto &elem : _children) {
+            num += elem.second->get_num_nodes();
+        }
+        return num;
+    }
+    int get_num_tables() {
+        int num = 0;
+        for (auto &elem : _arrangement) {
+            num += elem.second.size();
+        }
+        for (auto &elem : _children) {
+            num += elem.second->get_num_tables();
+        }
+        return num;
+    }
+    int get_num_customers() {
+        int num = 0;
+        for (auto &elem : _arrangement) {
+            num += std::accumulate(elem.second.begin(), elem.second.end(), 0);
+        }
+        for (auto &elem : _children) {
+            num += elem.second->get_num_customers();
+        }
+        return num;
+    }
+    int sum_pass_counts(){
+        int sum = _pass_count;
+        for(auto &elem: _children){
+            sum += elem.second->sum_pass_counts();
+        }
+        return sum;
+    }
+    int sum_stop_counts(){
+        int sum = _stop_count;
+        for(auto &elem: _children){
+            sum += elem.second->sum_stop_counts();
+        }
+        return sum;
+    }
+    void count_tokens_of_each_depth(unordered_map<int, int> &counts){
+        for(auto &elem: _arrangement){
+            counts[_depth] += 1;
+        }
+        for(auto &elem: _children){
+            elem.second->count_tokens_of_each_depth(counts);
+        }
+    }
+    void enumerate_nodes_at_depth(int depth, vector<Node*> &nodes){
+        if(_depth == depth){
+            nodes.push_back(this);
+        }
+        for(auto &elem: _children){
+            elem.second->enumerate_nodes_at_depth(depth, nodes);
+        }
+    }
     // for estimating `d` and `theta`; supplementary variable
     // x_u, y_ui, z_uwkj
     double auxiliary_log_x_u(double theta_u) {
@@ -261,7 +391,7 @@ public:
     double auxiliary_y_ui(double d_u, double theta_u) {
         if(_num_tables >= 2) {
             double sum_y_ui = 0;
-            for(int i = 1;i <= _num_tables - 1;i++) {
+            for(int i=1; i<=_num_tables-1; ++i) {
                 double denominator = theta_u + d_u * i;
                 assert(denominator > 0);
                 sum_y_ui += sampler::bernoulli(theta_u / denominator);
@@ -273,7 +403,7 @@ public:
     double auxiliary_1_y_ui(double d_u, double theta_u) {
         if(_num_tables >= 2) {
             double sum_1_y_ui = 0;
-            for(int i = 1;i <= _num_tables - 1;i++) {
+            for(int i=1; i<=_num_tables-1; ++i) {
                 double denominator = theta_u + d_u * i;
                 assert(denominator > 0);
                 sum_1_y_ui += 1.0 - sampler::bernoulli(theta_u / denominator);
@@ -285,64 +415,14 @@ public:
     double auxiliary_1_z_uwkj(double d_u) {
         double sum_z_uwkj = 0;
         // c_u..
-        for(auto elem: _arrangement) {
+        for(auto elem : _arrangement) {
             // c_uw.
             vector<int> &num_customers_at_table = elem.second;
-            for(int k = 0;k < num_customers_at_table.size();k++) {
+            for(int k=0; k<num_customers_at_table.size(); ++k) {
                 // c_uwk
                 int c_uwk = num_customers_at_table[k];
                 if(c_uwk >= 2){
-                    for(int j = 1;j <= c_uwk - 1;j++) {
-                        assert(j - d_u > 0);
-                        sum_z_uwkj += 1 - sampler::bernoulli((j - 1) / (j - d_u));
-                    }
-                }
-            }
-        }
-        return sum_z_uwkj;
-    }
-    double auxiliary_log_x_u(double theta_u) {
-        if(_num_customers >= 2) {
-            double x_u = sampler::beta(theta_u + 1, _num_customers - 1);
-            return log(x_u + 1e-8);
-        }
-        return 0;
-    }
-    double auxiliary_y_ui(double d_u, double theta_u) {
-        if(_num_tables >= 2) {
-            double sum_y_ui = 0;
-            for(int i = 1;i <= _num_tables - 1;i++) {
-                double denominator = theta_u + d_u * i;
-                assert(denominator > 0);
-                sum_y_ui += sampler::bernoulli(theta_u / denominator);
-            }
-            return sum_y_ui;
-        }
-        return 0;
-    }
-    double auxiliary_1_y_ui(double d_u, double theta_u) {
-        if(_num_tables >= 2) {
-            double sum_1_y_ui = 0;
-            for(int i = 1;i <= _num_tables - 1;i++) {
-                double denominator = theta_u + d_u * i;
-                assert(denominator > 0);
-                sum_1_y_ui += 1.0 - sampler::bernoulli(theta_u / denominator);
-            }
-            return sum_1_y_ui;
-        }
-        return 0;
-    }
-    double auxiliary_1_z_uwkj(double d_u) {
-        double sum_z_uwkj = 0;
-        // c_u..
-        for(auto elem: _arrangement) {
-            // c_uw.
-            vector<int> &num_customers_at_table = elem.second;
-            for(int k = 0;k < num_customers_at_table.size();k++) {
-                // c_uwk
-                int c_uwk = num_customers_at_table[k];
-                if(c_uwk >= 2){
-                    for(int j = 1;j <= c_uwk - 1;j++) {
+                    for(int j=1; j<=c_uwk-1; ++j) {
                         assert(j - d_u > 0);
                         sum_z_uwkj += 1 - sampler::bernoulli((j - 1) / (j - d_u));
                     }
@@ -390,7 +470,7 @@ public:
         os << endl;
         os << "- _children" << endl;
         os << "    ";
-        for(auto elem: node._children){
+        for(auto elem : node._children){
         }
         os << endl;
         return os;
