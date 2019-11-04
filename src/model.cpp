@@ -168,6 +168,41 @@ public:
         _gibbs_first_addition = false;
     }
     void remove_all_data() {
-
+        for (int i=0; i<_dataset_train.size(); ++i) {
+            vector<id> &token_ids = _dataset_train[i];
+            vector<int> &prev_depths = _prev_depths_for_data[i];
+            // token_ids = [BOS, ids_1, ids_2, ..., ids_t]
+            for (int j=1; j<token_ids.size(); ++j) {
+                int prev_depth = prev_depths[j];
+                _vpylm->remove_customer_at_timestep(token_ids, j, prev_depth);
+            }
+        }
+    }
+    int get_num_train_data() {
+        return _dataset_train.size();
+    }
+    int get_num_test_data() {
+        return _dataset_test.size();
+    }
+    int get_num_nodes() {
+        return _vpylm->get_num_nodes();
+    }
+    int get_num_customers() {
+        return _vpylm->get_num_customers();
+    }
+    int get_num_types_of_words() {
+        return _word_count.size();
+    }
+    int get_num_words() {
+        return _sum_word_count;
+    }
+    int get_vpylm_depth() {
+        return _vpylm->get_depth();
+    }
+    id get_bos_id() {
+        return ID_BOS;
+    }
+    id get_eos_id() {
+        return ID_EOS;
     }
 };
