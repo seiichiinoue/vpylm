@@ -147,7 +147,7 @@ public:
         // for normalizing prob, calculate summation of all prob
         double sum = 0;
         for (int k=0; k<num_customers_at_table.size(); ++k) {
-            sum += std::max(0.0, num_customers_at_table[k] - d_u);
+            sum += std::max(0.0, num_customers_at_table[k] - d_u);  // c_k - d_u * t_uw ?
         }
         double t_u = _num_tables;
         sum += (theta_u + d_u * t_u) * parent_Pw;
