@@ -205,6 +205,38 @@ public:
         }
         return mult_pw;
     }
+    id sample_next_token(vector<id> &context_token_ids, unordered_set<id> &all_token_ids) {
+        vector<id> word_ids;
+        vector<double> probs;
+        double sum = 0;
+        for (id token_id : all_token_ids) {
+            if (token_id == ID_BOS) {
+                continue;
+            }
+            double pw_h = compute_Pw_given_h(token_id, context_token_ids);
+            if (pw_h > 0) {
+                word_ids.push_back(token_id);
+                probs.push_back(pw_h);
+                sum += pw_h;
+            }
+        }
+        if (word_ids.size() == 0) {
+            return ID_EOS;
+        }
+        if (sum == 0) {
+            return ID_EOS;
+        }
+        double normalizer = 1.0 / sum;
+        double bernoulli = sampler::uniform(0, 1);
+        double stack = 0;
+        for (int i=0; i<word_ids.size(); ++i) {
+            stack += probs[i] * normalizer;
+            if (stack >= bernoulli) {
+                return word_ids[i];
+            }
+        }
+        return word_ids.back();
+    }
     double compute_log_Pw(vector<id> &token_ids) {
         if (token_ids.size() == 0) {
             return 0;
