@@ -104,9 +104,7 @@ public:
         split_word_by(sentence, L' ', word_str_array);
         if (word_str_array.size() > 0) {
             vector<id> words;
-            for (int i=0; i<_vpylm->_depth; ++i) {
-                words.push_back(ID_BOS);
-            }
+            words.push_back(ID_BOS);
             for (auto word_str : word_str_array) {
                 if (word_str.size() == 0) {
                     continue;
@@ -234,7 +232,7 @@ public:
         double log_Pdataset = 0;
         for(int data_index=0; data_index<dataset.size(); ++data_index) {
             vector<id> &token_ids = dataset[data_index];
-            log_Pdataset += _vpylm->compute_log_Pw(token_ids);;
+            log_Pdataset += _vpylm->compute_log_Pw(token_ids);
         }
         return log_Pdataset;
     }
