@@ -35,7 +35,7 @@ class Text(object):
     def _wakati_en(self, path):
         wakatied = []
         for i in range(len(self.text)):
-            new_t = self.text[i].split(" ").strip("\n")
+            new_t = " ".join(self.text[i].split(" ")).strip("\n")
             wakatied.append(new_t)
         with open(path, "w") as f:
             for t in wakatied:
@@ -50,5 +50,6 @@ if __name__ == '__main__':
     filelist = os.listdir(args.tar_path)
     for file in filelist:
         if file.endswith(".txt"):
+            print(file)
             t = Text(args.tar_path+file)
             t._wakati(args.save_path+file)
