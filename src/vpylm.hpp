@@ -247,7 +247,7 @@ public:
             id token_id = token_ids[t];
             double pw_h = compute_Pw_given_h(token_id, context_token_ids);
             sum_pw_h += log(pw_h);
-            context_token_ids.push_back(token_ids[t]);
+            context_token_ids.push_back(token_id);
         }
         return sum_pw_h;
     }
@@ -261,7 +261,7 @@ public:
             id token_id = token_ids[t];
             double pw_h = compute_Pw_given_h(token_id, context_token_ids);
             sum_pw_h += log2(pw_h);
-            context_token_ids.push_back(token_ids[t]);
+            context_token_ids.push_back(token_id);
         }
         return sum_pw_h;
     }
