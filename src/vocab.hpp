@@ -56,7 +56,7 @@ public:
     int num_tokens() {
         return _string_by_token_id.size();
     }
-    void save(string filename="hpylm.vocab") {
+    void save(string filename="vpylm.vocab") {
         std::ofstream ofs(filename);
         boost::archive::binary_oarchive oarchive(ofs);
         oarchive << *this;
@@ -67,7 +67,7 @@ public:
         archive & _string_by_token_id;
         archive & _token_ids;
     }
-    void load(string filename="hpylm.vocab") {
+    void load(string filename="vpylm.vocab") {
         std::ifstream ifs(filename);
         if (ifs.good()) {
             boost::archive::binary_iarchive iarchive(ifs);
