@@ -48,7 +48,7 @@ public:
     // statistics
     unordered_map<id, int> _word_count;
     int _sum_word_count;
-    bool gibbs_first_addition;
+    bool _gibbs_first_addition;
     PyVPYLM() {
         setlocale(LC_CTYPE, "ja_JP.UTF-8");
         ios_base::sync_with_stdio(false);
@@ -166,5 +166,8 @@ public:
             }
         }
         _gibbs_first_addition = false;
+    }
+    void remove_all_data() {
+
     }
 };
