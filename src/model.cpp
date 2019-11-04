@@ -143,4 +143,28 @@ public:
         _vocab->save(dir+"/vpylm.vocab");
         _vpylm->save(dir+"/vpylm.model");
     }
+    void perform_gibbs_sampling() {
+        if (_rand_indices.size() != _dataset_train.size()) {
+            _rand_indices.clear();
+            for (int data_index=0; data_index<_dataset_train.size(); ++data_index) {
+                _rand_indices.push_back(data_index);
+            }
+        }
+        shuffle(_rand_indices.begin(), _rand_indices.end(), sampler::mt);
+        for (int n=0; n<_dataset_train.size(); ++n) {
+            int data_index = _rand_indices[n];
+            vector<id> &token_ids = _dataset_train[data_index];
+            vector<int> &prev_depths = _prev_depths_for_data[data_index];
+            for (int token_t_index=1; token_t_index<token_ids.size(); ++token_t_index) {
+                if (_gibbs_first_addition == false) {
+                    int prev_depth = prev_depths[token_t_index];
+                    _vpylm->remove_customer_at_timestep(token_ids, token_t_index, prev_depth);
+                }
+                int new_depth = _vpylm->sample_depth_at_timestep(token_ids, token_t_index);
+                _vpylm->add_customer_at_timestep(token_ids, token_t_index, new_depth);
+                prev_depths[token_t_index] = new_depth;
+            }
+        }
+        _gibbs_first_addition = false;
+    }
 };
