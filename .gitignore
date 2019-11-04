@@ -8,6 +8,7 @@
 !*.cpp
 !*.hpp
 !*.md
+!*.txt
 !.gitignore
 !makefile
 
