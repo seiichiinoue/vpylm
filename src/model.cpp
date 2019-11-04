@@ -27,11 +27,11 @@ void split_word_by(const wstring &str, wchar_t delim, vector<wstring> &elems) {
 }
 
 template<class T>
-python::list list_from_vector(vector<T> &vec){  
+python::list list_from_vector(vector<T> &vec) {  
      python::list list;
      typename vector<T>::const_iterator it;
 
-     for(it = vec.begin(); it != vec.end(); ++it)   {
+     for(it = vec.begin(); it != vec.end(); ++it) {
           list.append(*it);
      }
      return list;
@@ -205,4 +205,93 @@ public:
     id get_eos_id() {
         return ID_EOS;
     }
+    python::list count_tokens_of_each_depth() {
+        unordered_map<int, int> counts_by_depth;
+        _vpylm->count_tokens_of_each_depth(counts_by_depth);
+        std::map<int, int> sorted_counts_by_depth(counts_by_depth.begin(), counts_by_depth.end());
+        std::vector<int> counts;
+        for (auto it=sorted_counts_by_depth.begin(); it != sorted_counts_by_depth.end(); ++it) {
+            counts.push_back(it->second);
+        }
+        return list_from_vector(counts);
+    }
+    python::list get_discount_parameters() {
+        return list_from_vector(_vpylm->_d_m);
+    }
+    python::list get_strength_parameters() {
+        return list_from_vector(_vpylm->_theta_m);
+    }
+    void sample_hyperparams() {
+        _vpylm->sample_hyperparams();
+    }
+    double compute_log_Pdataset_train() {
+        return _compute_log_Pdataset(_dataset_train);
+    }
+    double compute_log_Pdataset_test() {
+        return _compute_log_Pdataset(_dataset_test);
+    }
+    double _compute_log_Pdataset(vector<vector<id>> &dataset) {
+        double log_Pdataset = 0;
+        for(int data_index=0; data_index<dataset.size(); ++data_index) {
+            vector<id> &token_ids = dataset[data_index];
+            log_Pdataset += _vpylm->compute_log_Pw(token_ids);;
+        }
+        return log_Pdataset;
+    }
+    double compute_perplexity_train() {
+        return _compute_perplexity(_dataset_train);
+    }
+    double compute_perplexity_test() {
+        return _compute_perplexity(_dataset_test);
+    }
+    double _compute_perplexity(vector<vector<id>> &dataset) {
+        double log_Pdataset = 0;
+        for(int data_index=0; data_index<dataset.size(); ++data_index) {            
+            vector<id> &token_ids = dataset[data_index];
+            log_Pdataset += _vpylm->compute_log2_Pw(token_ids) / token_ids.size();
+        }
+        return pow(2.0, -log_Pdataset / (double)dataset.size());
+    }
+    wstring generate_sentence() {
+        std::vector<id> context_token_ids;
+        context_token_ids.push_back(ID_BOS);
+        for(int n=0; n<1000; ++n) {
+            id next_id = _vpylm->sample_next_token(context_token_ids, _vocab->get_all_token_ids());
+            if(next_id == ID_EOS) {
+                vector<id> token_ids(context_token_ids.begin() + 1, context_token_ids.end());
+                return _vocab->token_ids_to_sentence(token_ids);
+            }
+            context_token_ids.push_back(next_id);
+        }
+        return _vocab->token_ids_to_sentence(context_token_ids);
+    }
 };
+
+BOOST_PYTHON_MODULE(model) {
+    python::class_<PyVPYLM>("vpylm", python::init<>())
+    .def("set_g0", &PyVPYLM::set_g0)
+    .def("set_seed", &PyVPYLM::set_seed)
+    .def("load_textfile", &PyVPYLM::load_textfile)
+    .def("prepare", &PyVPYLM::prepare)
+    .def("perform_gibbs_sampling", &PyVPYLM::perform_gibbs_sampling)
+    .def("get_num_nodes", &PyVPYLM::get_num_nodes)
+    .def("get_num_customers", &PyVPYLM::get_num_customers)
+    .def("get_discount_parameters", &PyVPYLM::get_discount_parameters)
+    .def("get_strength_parameters", &PyVPYLM::get_strength_parameters)
+    .def("get_num_train_data", &PyVPYLM::get_num_train_data)
+    .def("get_num_test_data", &PyVPYLM::get_num_test_data)
+    .def("get_num_types_of_words", &PyVPYLM::get_num_types_of_words)
+    .def("get_num_words", &PyVPYLM::get_num_words)
+    .def("get_vpylm_depth", &PyVPYLM::get_vpylm_depth)
+    .def("get_bos_id", &PyVPYLM::get_bos_id)
+    .def("get_eos_id", &PyVPYLM::get_eos_id)
+    .def("sample_hyperparams", &PyVPYLM::sample_hyperparams)
+    .def("count_tokens_of_each_depth", &PyVPYLM::count_tokens_of_each_depth)
+    .def("compute_log_Pdataset_train", &PyVPYLM::compute_log_Pdataset_train)
+    .def("compute_log_Pdataset_test", &PyVPYLM::compute_log_Pdataset_test)
+    .def("compute_perplexity_train", &PyVPYLM::compute_perplexity_train)
+    .def("compute_perplexity_test", &PyVPYLM::compute_perplexity_test)
+    .def("generate_sentence", &PyVPYLM::generate_sentence)
+    .def("save", &PyVPYLM::save)
+    .def("load", &PyVPYLM::load);
+}
