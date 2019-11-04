@@ -18,7 +18,7 @@ orders of generation.
 - prepare dataset
 
 ```zsh
-% python3 utils/process.py -t data/raw/ -s data/processed
+% python3 utils/process.py -t data/raw/ -s data/processed/
 ```
 
 - build library
