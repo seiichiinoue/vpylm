@@ -6,9 +6,9 @@ def generate(args):
     vpylm = model.vpylm()
     vpylm.load(args.model)
     for _ in range(args.num):
-        # print(hpylm.generate_sentence())
+        generated = vpylm.generate_sentence()
         # for japanese
-        generated = vpylm.generate_sentence().replace(" ", "")
+        # generated = vpylm.generate_sentence().replace(" ", "")
         print(generated)
 
 if __name__ == '__main__':
