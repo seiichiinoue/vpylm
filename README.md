@@ -89,5 +89,4 @@ troy .
 ## Reference
 
 - [Bayesian Variable Order n-gram Language Model based on Pitman-Yor Processes](http://chasen.org/~daiti-m/paper/nl178vpylm.pdf)
-
 - [musyoku.github.io](http://musyoku.github.io/)
