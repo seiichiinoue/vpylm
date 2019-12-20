@@ -9,7 +9,7 @@
 !*.hpp
 !*.md
 !*.txt
-!.dockerfile
+!dockerfile
 !.gitignore
 !makefile
 
